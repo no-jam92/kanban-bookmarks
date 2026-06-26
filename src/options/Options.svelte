@@ -3,6 +3,11 @@
   import { getSettings, setSettings } from '../lib/settings'
   import { ensureRootFolder } from '../lib/bookmarks'
   import { parseStackable, importStackable } from '../lib/import'
+  import { theme, type Theme } from '../lib/theme.svelte'
+
+  function onTheme(e: Event) {
+    void theme.set((e.target as HTMLSelectElement).value as Theme)
+  }
 
   type FolderOpt = { id: string; label: string }
   let folders = $state<FolderOpt[]>([])
@@ -91,6 +96,16 @@
     <span class="logo">◧</span>
     <h1>Kanban Bookmarks 설정</h1>
   </header>
+
+  <section class="panel">
+    <h2>테마</h2>
+    <p class="muted">Tokyo Night 다크/라이트 또는 시스템 설정을 따릅니다.</p>
+    <select class="tn-select full" value={theme.current} onchange={onTheme}>
+      <option value="system">시스템 설정 따르기</option>
+      <option value="dark">다크 (Tokyo Night)</option>
+      <option value="light">라이트 (Tokyo Night Light)</option>
+    </select>
+  </section>
 
   <section class="panel">
     <h2>칸반 루트 폴더</h2>

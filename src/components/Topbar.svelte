@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ui } from '../lib/ui.svelte'
   import { kanban } from '../lib/store.svelte'
+  import { theme } from '../lib/theme.svelte'
 
   let activeTitle = $derived(
     kanban.boards.find((b) => b.id === kanban.activeBoardId)?.title ?? '',
@@ -15,6 +16,13 @@
     <span class="sep">/</span>
     <span class="board-name">{activeTitle}</span>
   {/if}
+
+  <div class="spacer"></div>
+
+  <button class="tn-icon-btn theme-toggle" onclick={() => theme.toggle()}
+          aria-label="테마 전환" title={theme.isDark ? '라이트 모드로' : '다크 모드로'}>
+    {theme.isDark ? '☀️' : '🌙'}
+  </button>
 </nav>
 
 <style>
@@ -43,4 +51,6 @@
     font-weight: var(--weight-medium);
     color: var(--color-text-secondary);
   }
+  .spacer { flex: 1; }
+  .theme-toggle { font-size: var(--text-base); }
 </style>

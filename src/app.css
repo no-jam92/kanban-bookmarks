@@ -84,12 +84,49 @@
   /* --- Motion --- */
   --transition: 140ms ease;
 
+  --danger-hover: color-mix(in srgb, var(--color-danger) 86%, #ffffff);
+
   color-scheme: dark;
   font-family: var(--font-sans);
   color: var(--color-text);
   background: var(--color-bg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* ============================================================
+   Tokyo Night Light — light theme overrides
+   ============================================================ */
+:root[data-theme='light'] {
+  --color-bg:             #d8dae3;
+  --color-surface:        #e6e8f0;
+  --color-card:           #ffffff;
+  --color-card-hover:     #f1f3fb;
+  --color-wash:           #dde0ec;
+  --color-border:         #b7bcce;
+  --color-border-subtle:  #cdd1e0;
+
+  --color-text:           #343b58;
+  --color-text-secondary: #565d7e;
+  --color-text-muted:     #8990b3;
+
+  --color-accent:         #2e7de9;
+  --color-accent-hover:   #1b6fe0;
+  --color-accent-soft:    rgba(46, 125, 233, 0.12);
+  --color-on-accent:      #ffffff;
+  --color-focus-ring:     rgba(46, 125, 233, 0.4);
+
+  --color-danger:         #d6455d;
+  --color-danger-soft:    rgba(214, 69, 93, 0.12);
+  --color-success:        #587539;
+
+  --tn-dark5:             #8990b3;
+
+  --shadow-card: 0 1px 2px rgba(52, 59, 88, 0.12);
+  --shadow-pop:  0 6px 20px rgba(52, 59, 88, 0.18);
+  --shadow-drag: 0 12px 32px rgba(52, 59, 88, 0.24);
+
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -182,8 +219,8 @@ body {
   font-weight: var(--weight-semibold);
 }
 .tn-btn--danger:hover {
-  background: #ff8699;
-  border-color: #ff8699;
+  background: var(--danger-hover);
+  border-color: var(--danger-hover);
   color: var(--color-on-accent);
 }
 
