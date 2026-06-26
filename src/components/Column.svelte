@@ -9,6 +9,12 @@
   let { column }: { column: Column } = $props()
 
   const flipDurationMs = 150
+  const dropTargetStyle = {
+    outline: '2px dashed var(--color-accent)',
+    outlineOffset: '-2px',
+    borderRadius: 'var(--radius-md)',
+    background: 'var(--color-accent-soft)',
+  }
   // svelte-ignore state_referenced_locally
   let items = $state<Card[]>(column.cards)
   let dragging = $state(false)
@@ -80,7 +86,7 @@
     <button class="tn-icon-btn tn-icon-btn--danger del" onclick={del} aria-label="컬럼 삭제">×</button>
   </header>
 
-  <div class="cards" use:dndzone={{ items, type: 'card', flipDurationMs }}
+  <div class="cards" use:dndzone={{ items, type: 'card', flipDurationMs, dropTargetStyle }}
        onconsider={consider} onfinalize={finalize}>
     {#each items as card (card.id)}
       <div animate:flip={{ duration: flipDurationMs }}>

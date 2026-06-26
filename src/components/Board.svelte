@@ -9,6 +9,12 @@
   let { board }: { board: Board } = $props()
 
   const flipDurationMs = 150
+  const dropTargetStyle = {
+    outline: '2px dashed var(--color-accent)',
+    outlineOffset: '-2px',
+    borderRadius: 'var(--radius-lg)',
+    background: 'var(--color-accent-soft)',
+  }
   // svelte-ignore state_referenced_locally
   let columns = $state<Column[]>(board.columns)
   let dragging = $state(false)
@@ -41,7 +47,7 @@
   }
 </script>
 
-<div class="board" use:dndzone={{ items: columns, type: 'column', flipDurationMs }}
+<div class="board" use:dndzone={{ items: columns, type: 'column', flipDurationMs, dropTargetStyle }}
      onconsider={consider} onfinalize={finalize}>
   {#each columns as column (column.id)}
     <div class="col-wrap" animate:flip={{ duration: flipDurationMs }}>
