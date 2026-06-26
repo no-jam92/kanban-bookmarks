@@ -3,8 +3,42 @@
   import { kanban } from '../lib/store.svelte'
   import { theme } from '../lib/theme.svelte'
   import { iconStore } from '../lib/icons.svelte'
+  import { renameNode } from '../lib/bookmarks'
 
   let active = $derived(kanban.boards.find((b) => b.id === kanban.activeBoardId) ?? null)
+
+  let editing = $state(false)
+  let draft = $state('')
+  let inputEl = $state<HTMLInputElement | null>(null)
+
+  // 보드를 전환하면 편집 모드 종료
+  $effect(() => {
+    active?.id
+    editing = false
+  })
+  // 편집 시작 시 입력에 포커스
+  $effect(() => {
+    if (editing && inputEl) {
+      inputEl.focus()
+      inputEl.select()
+    }
+  })
+
+  function startEdit() {
+    if (!active) return
+    draft = active.title
+    editing = true
+  }
+  async function commit() {
+    if (!editing) return
+    editing = false
+    const name = draft.trim()
+    if (active && name && name !== active.title) await renameNode(active.id, name)
+  }
+  function onKey(e: KeyboardEvent) {
+    if (e.key === 'Enter') commit()
+    else if (e.key === 'Escape') editing = false
+  }
 
   function toggleTheme(e: MouseEvent) {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
@@ -22,7 +56,13 @@
   {#if active}
     <span class="sep">/</span>
     <span class="board-name">
-      <span class="b-icon">{iconStore.boardIcon(active.id, active.title)}</span>{active.title}
+      <span class="b-icon">{iconStore.boardIcon(active.id, active.title)}</span>
+      {#if editing}
+        <input class="name-input" bind:this={inputEl} bind:value={draft}
+               onblur={commit} onkeydown={onKey} />
+      {:else}
+        <button class="name-btn" onclick={startEdit} title="보드 이름 수정">{active.title}</button>
+      {/if}
     </span>
   {/if}
 
@@ -67,6 +107,27 @@
     color: var(--color-text-secondary);
   }
   .b-icon { font-size: 1.1em; line-height: 1; }
+  .name-btn {
+    border: 0;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    cursor: text;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    transition: background var(--transition);
+  }
+  .name-btn:hover { background: var(--color-wash); }
+  .name-input {
+    font: inherit;
+    color: var(--color-text);
+    background: var(--color-bg);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    padding: 2px 6px;
+    outline: none;
+    box-shadow: 0 0 0 3px var(--color-focus-ring);
+  }
   .spacer { flex: 1; }
 
   .theme-toggle {
