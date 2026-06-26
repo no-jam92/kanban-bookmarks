@@ -18,6 +18,10 @@
     e.stopPropagation()
     await removeCard(card.id)
   }
+
+  let host = $derived.by(() => {
+    try { return new URL(card.url).hostname.replace(/^www\./, '') } catch { return '' }
+  })
 </script>
 
 <div class="card" onclick={open} role="button" tabindex="0"
@@ -28,26 +32,84 @@
     <img class="favicon" src={faviconUrl(card.url)} alt=""
          onerror={() => (imgFailed = true)} />
   {/if}
-  <span class="title">{card.title || card.url}</span>
-  <button class="rename" onclick={rename} aria-label="이름변경">✎</button>
-  <button class="del" onclick={del} aria-label="삭제">×</button>
+  <span class="body">
+    <span class="title">{card.title || card.url}</span>
+    {#if host}<span class="host">{host}</span>{/if}
+  </span>
+  <span class="actions">
+    <button class="tn-icon-btn" onclick={rename} aria-label="이름변경">✎</button>
+    <button class="tn-icon-btn tn-icon-btn--danger" onclick={del} aria-label="삭제">×</button>
+  </span>
 </div>
 
 <style>
   .card {
-    display: flex; align-items: center; gap: 0.5rem;
-    padding: 0.5rem; margin: 0.35rem 0; border-radius: 6px;
-    background: Canvas; border: 1px solid color-mix(in srgb, CanvasText 15%, transparent);
-    cursor: pointer; user-select: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    margin: var(--space-2) 0;
+    border-radius: var(--radius-md);
+    background: var(--color-card);
+    border: 1px solid var(--color-border-subtle);
+    box-shadow: var(--shadow-card);
+    cursor: pointer;
+    user-select: none;
+    transition: background var(--transition), border-color var(--transition),
+      transform var(--transition), box-shadow var(--transition);
   }
-  .card:hover { border-color: color-mix(in srgb, CanvasText 35%, transparent); }
-  .favicon, .fallback {
-    width: 16px; height: 16px; flex: 0 0 16px; border-radius: 3px;
-    display: grid; place-items: center; font-size: 10px; font-weight: 700;
-    background: color-mix(in srgb, CanvasText 12%, transparent);
+  .card:hover {
+    background: var(--color-card-hover);
+    border-color: var(--color-accent);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-pop);
   }
-  .title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem; }
-  .rename, .del { border: 0; background: transparent; cursor: pointer; font-size: 0.9rem; opacity: 0; color: CanvasText; }
-  .card:hover .rename, .card:hover .del { opacity: 0.6; }
-  .rename:hover, .del:hover { opacity: 1; }
+  .card:active { transform: translateY(0); }
+
+  .favicon,
+  .fallback {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+    border-radius: var(--radius-sm);
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    font-weight: var(--weight-bold);
+    color: var(--color-accent);
+    background: var(--color-accent-soft);
+    object-fit: contain;
+  }
+
+  .body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-text);
+  }
+  .host {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+
+  .actions {
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity var(--transition);
+  }
+  .card:hover .actions,
+  .card:focus-within .actions { opacity: 1; }
 </style>

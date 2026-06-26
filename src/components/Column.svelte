@@ -56,12 +56,13 @@
 <section class="column">
   <header>
     {#if editing}
-      <input bind:value={titleDraft} onblur={saveTitle}
+      <input class="tn-input title-input" bind:value={titleDraft} onblur={saveTitle}
              onkeydown={(e) => e.key === 'Enter' && saveTitle()} />
     {:else}
       <h2 ondblclick={() => { editing = true; titleDraft = column.title }}>{column.title}</h2>
+      <span class="count">{items.length}</span>
     {/if}
-    <button class="del" onclick={del} aria-label="컬럼 삭제">×</button>
+    <button class="tn-icon-btn tn-icon-btn--danger del" onclick={del} aria-label="컬럼 삭제">×</button>
   </header>
 
   <div class="cards" use:dndzone={{ items, type: 'card', flipDurationMs }}
@@ -71,26 +72,89 @@
         <CardView {card} />
       </div>
     {/each}
+    {#if items.length === 0}
+      <p class="empty">카드를 여기로 드래그하거나 추가하세요</p>
+    {/if}
   </div>
 
-  <button class="add" onclick={addCard}>+ 카드 추가</button>
+  <button class="add" onclick={addCard}>＋ 카드 추가</button>
 </section>
 
 <style>
   .column {
-    display: flex; flex-direction: column; width: 280px; flex: 0 0 280px;
-    max-height: 100%; background: color-mix(in srgb, CanvasText 6%, Canvas);
-    border-radius: 10px; padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    width: 300px;
+    flex: 0 0 300px;
+    max-height: 100%;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
   }
-  header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
-  h2 { font-size: 0.9rem; margin: 0; flex: 1; cursor: text; }
-  header input { flex: 1; font-size: 0.9rem; }
-  .del { border: 0; background: transparent; cursor: pointer; opacity: 0.4; color: CanvasText; }
-  .del:hover { opacity: 1; }
-  .cards { flex: 1; overflow-y: auto; min-height: 40px; }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+    padding: 0 var(--space-1);
+  }
+  h2 {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.02em;
+    margin: 0;
+    color: var(--color-text);
+    cursor: text;
+  }
+  .count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 22px;
+    height: 20px;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-full);
+    background: var(--color-wash);
+    color: var(--color-text-secondary);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+  }
+  .title-input { flex: 1; height: 28px; }
+  .del { margin-left: auto; opacity: 0; transition: opacity var(--transition); }
+  header:hover .del { opacity: 1; }
+
+  .cards {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 48px;
+    margin: 0 calc(-1 * var(--space-1));
+    padding: 0 var(--space-1);
+  }
+  .empty {
+    margin: var(--space-2) 0;
+    padding: var(--space-4);
+    border: 1px dashed var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    text-align: center;
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+
   .add {
-    margin-top: 0.4rem; border: 0; background: transparent; cursor: pointer;
-    text-align: left; padding: 0.4rem; border-radius: 6px; color: CanvasText; opacity: 0.7;
+    margin-top: var(--space-2);
+    width: 100%;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-muted);
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    transition: background var(--transition), color var(--transition);
   }
-  .add:hover { background: color-mix(in srgb, CanvasText 10%, transparent); opacity: 1; }
+  .add:hover { background: var(--color-wash); color: var(--color-text); }
 </style>

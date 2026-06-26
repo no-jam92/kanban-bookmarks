@@ -38,22 +38,49 @@
 <div class="board" use:dndzone={{ items: columns, type: 'column', flipDurationMs }}
      onconsider={consider} onfinalize={finalize}>
   {#each columns as column (column.id)}
-    <div animate:flip={{ duration: flipDurationMs }}>
+    <div class="col-wrap" animate:flip={{ duration: flipDurationMs }}>
       <ColumnView {column} />
     </div>
   {/each}
-  <button class="add-col" onclick={addColumn}>+ 컬럼 추가</button>
+  <button class="add-col" onclick={addColumn}>
+    <span class="plus">＋</span>
+    <span>컬럼 추가</span>
+  </button>
 </div>
 
 <style>
   .board {
-    display: flex; gap: 0.8rem; align-items: flex-start;
-    padding: 1rem; overflow-x: auto; height: calc(100vh - 56px);
+    display: flex;
+    gap: var(--space-4);
+    align-items: flex-start;
+    padding: var(--space-5);
+    overflow-x: auto;
+    height: calc(100vh - 60px);
   }
+  .col-wrap { height: 100%; display: flex; }
+
   .add-col {
-    flex: 0 0 280px; border: 1px dashed color-mix(in srgb, CanvasText 30%, transparent);
-    background: transparent; border-radius: 10px; padding: 0.8rem; cursor: pointer;
-    color: CanvasText; opacity: 0.7;
+    flex: 0 0 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    border: 1px dashed var(--color-border);
+    background: transparent;
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    cursor: pointer;
+    color: var(--color-text-muted);
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    transition: background var(--transition), border-color var(--transition),
+      color var(--transition);
   }
-  .add-col:hover { opacity: 1; }
+  .add-col:hover {
+    background: var(--color-accent-soft);
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+  .plus { font-size: var(--text-lg); }
 </style>
