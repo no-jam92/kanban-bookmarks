@@ -4,6 +4,7 @@
   import { createBoard } from '../lib/bookmarks'
   import BoardSelector from '../components/BoardSelector.svelte'
   import BoardView from '../components/Board.svelte'
+  import ModalHost from '../components/ModalHost.svelte'
 
   onMount(() => { void kanban.init() })
   onDestroy(() => kanban.dispose())
@@ -33,6 +34,8 @@
     <BoardView board={kanban.board} />
   {/if}
 {/if}
+
+<ModalHost />
 
 <style>
   .state {

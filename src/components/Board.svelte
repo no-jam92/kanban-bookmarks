@@ -3,6 +3,7 @@
   import { flip } from 'svelte/animate'
   import type { Board, Column } from '../lib/bookmarks'
   import { moveNode, createColumn } from '../lib/bookmarks'
+  import { modal } from '../lib/modal.svelte'
   import ColumnView from './Column.svelte'
 
   let { board }: { board: Board } = $props()
@@ -30,8 +31,13 @@
   }
 
   async function addColumn() {
-    const title = prompt('컬럼 이름')
-    if (title?.trim()) await createColumn(board.id, title.trim())
+    const res = await modal.form({
+      title: '컬럼 추가',
+      fields: [{ name: 'title', label: '컬럼 이름', placeholder: '예: To Do', required: true }],
+      confirmText: '추가',
+    })
+    const title = res?.title.trim()
+    if (title) await createColumn(board.id, title)
   }
 </script>
 

@@ -3,6 +3,7 @@
   import { flip } from 'svelte/animate'
   import type { Column, Card } from '../lib/bookmarks'
   import { moveNode, renameNode, removeFolder, createCard } from '../lib/bookmarks'
+  import { modal } from '../lib/modal.svelte'
   import CardView from './Card.svelte'
 
   let { column }: { column: Column } = $props()
@@ -44,12 +45,26 @@
     }
   }
   async function del() {
-    if (confirm(`컬럼 "${column.title}"을(를) 삭제할까요?`)) await removeFolder(column.id)
+    const ok = await modal.confirm({
+      title: '컬럼 삭제',
+      message: `컬럼 "${column.title}"을(를) 삭제할까요? 안의 카드도 모두 삭제됩니다.`,
+      confirmText: '삭제',
+      danger: true,
+    })
+    if (ok) await removeFolder(column.id)
   }
   async function addCard() {
-    const url = prompt('URL을 입력하세요')
+    const res = await modal.form({
+      title: '카드 추가',
+      fields: [
+        { name: 'title', label: '제목', placeholder: '예: Svelte 공식 문서' },
+        { name: 'url', label: 'URL', type: 'url', placeholder: 'https://...', required: true },
+      ],
+      confirmText: '추가',
+    })
+    const url = res?.url.trim()
     if (!url) return
-    await createCard(column.id, url, url)
+    await createCard(column.id, res!.title.trim() || url, url)
   }
 </script>
 

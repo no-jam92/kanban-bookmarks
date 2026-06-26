@@ -175,6 +175,18 @@ body {
 }
 .tn-btn--ghost:hover { background: var(--color-wash); }
 
+.tn-btn--danger {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  color: var(--color-on-accent);
+  font-weight: var(--weight-semibold);
+}
+.tn-btn--danger:hover {
+  background: #ff8699;
+  border-color: #ff8699;
+  color: var(--color-on-accent);
+}
+
 /* Icon-only button */
 .tn-icon-btn {
   display: inline-grid;

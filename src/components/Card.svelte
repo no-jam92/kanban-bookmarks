@@ -2,6 +2,7 @@
   import type { Card } from '../lib/bookmarks'
   import { removeCard, renameNode } from '../lib/bookmarks'
   import { faviconUrl, initials } from '../lib/favicon'
+  import { modal } from '../lib/modal.svelte'
 
   let { card }: { card: Card } = $props()
   let imgFailed = $state(false)
@@ -11,12 +12,23 @@
   }
   async function rename(e: MouseEvent) {
     e.stopPropagation()
-    const title = prompt('카드 이름', card.title)
-    if (title?.trim() && title !== card.title) await renameNode(card.id, title.trim())
+    const res = await modal.form({
+      title: '카드 이름 변경',
+      fields: [{ name: 'title', label: '이름', value: card.title, required: true }],
+      confirmText: '저장',
+    })
+    const title = res?.title.trim()
+    if (title && title !== card.title) await renameNode(card.id, title)
   }
   async function del(e: MouseEvent) {
     e.stopPropagation()
-    await removeCard(card.id)
+    const ok = await modal.confirm({
+      title: '카드 삭제',
+      message: `"${card.title || card.url}"을(를) 삭제할까요?`,
+      confirmText: '삭제',
+      danger: true,
+    })
+    if (ok) await removeCard(card.id)
   }
 
   let host = $derived.by(() => {
