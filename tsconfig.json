@@ -4,7 +4,6 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "types": ["chrome", "vite/client"],
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "strict": true
