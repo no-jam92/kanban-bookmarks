@@ -88,11 +88,16 @@
       </div>
     {/each}
     {#if items.length === 0}
-      <p class="empty">카드를 여기로 드래그하거나 추가하세요</p>
+      <button class="ghost-card" onclick={addCard}>
+        <span class="ghost-plus">＋</span>
+        <span>링크 추가</span>
+      </button>
     {/if}
   </div>
 
-  <button class="add" onclick={addCard}>＋ 카드 추가</button>
+  {#if items.length > 0}
+    <button class="add" onclick={addCard}>＋ 카드 추가</button>
+  {/if}
 </section>
 
 <style>
@@ -146,15 +151,31 @@
     margin: 0 calc(-1 * var(--space-1));
     padding: 0 var(--space-1);
   }
-  .empty {
+  .ghost-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    width: 100%;
     margin: var(--space-2) 0;
     padding: var(--space-4);
-    border: 1px dashed var(--color-border-subtle);
+    border: 1.5px dashed var(--color-border);
     border-radius: var(--radius-md);
-    text-align: center;
-    font-size: var(--text-xs);
+    background: transparent;
     color: var(--color-text-muted);
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition),
+      color var(--transition);
   }
+  .ghost-card:hover {
+    background: var(--color-accent-soft);
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+  .ghost-plus { font-size: var(--text-lg); line-height: 1; }
 
   .add {
     margin-top: var(--space-2);
