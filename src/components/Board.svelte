@@ -69,7 +69,7 @@
     overflow-x: auto;
     height: calc(100vh - 60px);
   }
-  .col-wrap { height: 100%; display: flex; }
+  .col-wrap { display: flex; max-height: 100%; min-height: 0; }
 
   .add-col {
     flex: 0 0 300px;

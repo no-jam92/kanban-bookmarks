@@ -3,6 +3,7 @@
   import { ui } from '../lib/ui.svelte'
   import { createBoard, removeFolder } from '../lib/bookmarks'
   import { modal } from '../lib/modal.svelte'
+  import { boardEmoji } from '../lib/board-icon'
 
   async function addBoard() {
     if (!kanban.rootId) return
@@ -43,7 +44,8 @@
         {#each kanban.boards as b (b.id)}
           <li class:active={b.id === kanban.activeBoardId}>
             <button class="board-btn" onclick={() => kanban.selectBoard(b.id)} title={b.title}>
-              {b.title}
+              <span class="b-icon">{boardEmoji(b.title)}</span>
+              <span class="b-name">{b.title}</span>
             </button>
             <button class="tn-icon-btn tn-icon-btn--danger del" onclick={() => delBoard(b.id, b.title)}
                     aria-label="보드 삭제">×</button>
@@ -109,6 +111,9 @@
   .board-btn {
     flex: 1;
     min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
     border: 0;
     background: transparent;
     text-align: left;
@@ -118,10 +123,9 @@
     font-weight: var(--weight-medium);
     color: var(--color-text-secondary);
     cursor: pointer;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
+  .b-icon { flex: 0 0 auto; font-size: 1.05em; line-height: 1; }
+  .b-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   li.active .board-btn { color: var(--color-text); }
 
   .del { opacity: 0; margin-right: var(--space-1); }

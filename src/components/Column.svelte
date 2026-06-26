@@ -136,6 +136,7 @@
     gap: var(--space-2);
     margin-bottom: var(--space-3);
     padding: 0 var(--space-1);
+    flex: 0 0 auto;
   }
   h2 {
     font-size: var(--text-sm);
@@ -162,9 +163,9 @@
   header:hover .del { opacity: 1; }
 
   .cards {
-    flex: 1;
+    flex: 0 1 auto;
+    min-height: 0;
     overflow-y: auto;
-    min-height: 48px;
     margin: 0 calc(-1 * var(--space-1));
     padding: 0 var(--space-1);
   }
@@ -195,6 +196,7 @@
   .ghost-plus { font-size: var(--text-lg); line-height: 1; }
 
   .add {
+    flex: 0 0 auto;
     margin-top: var(--space-2);
     width: 100%;
     border: 0;
