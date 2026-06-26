@@ -1,4 +1,8 @@
+import { tick } from 'svelte'
+
 export type Theme = 'system' | 'dark' | 'light'
+
+type Origin = { x: number; y: number }
 
 const LS_KEY = 'kb-theme' // flash 방지용 로컬 미러 (동기 읽기)
 const STORE_KEY = 'theme' // chrome.storage.sync (영속/동기화)
@@ -51,16 +55,46 @@ class ThemeStore {
     })
   }
 
-  async set(t: Theme): Promise<void> {
-    this.current = t
+  async set(t: Theme, origin?: Origin): Promise<void> {
     localStorage.setItem(LS_KEY, t)
-    this.#apply()
+
+    const mutate = async () => {
+      this.current = t
+      this.#apply()
+      await tick() // 스냅샷 전에 Svelte DOM(토글 스와치 등)까지 반영
+    }
+
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+
+    if (origin && typeof document.startViewTransition === 'function' && !reduce) {
+      const vt = document.startViewTransition(mutate)
+      try {
+        await vt.ready
+        this.#circleReveal(origin)
+      } catch {
+        /* 전환이 중단돼도 테마는 이미 적용됨 */
+      }
+    } else {
+      await mutate()
+    }
+
     await chrome.storage.sync.set({ [STORE_KEY]: t })
   }
 
   /** 상단바 빠른 토글: 현재 보이는 테마의 반대로 (system은 해제하고 명시 선택). */
-  toggle(): void {
-    void this.set(this.isDark ? 'light' : 'dark')
+  toggle(origin?: Origin): void {
+    void this.set(this.isDark ? 'light' : 'dark', origin)
+  }
+
+  /** origin 지점에서 퍼지는 원형 reveal로 새 테마를 드러낸다. */
+  #circleReveal({ x, y }: Origin): void {
+    const w = window.innerWidth
+    const h = window.innerHeight
+    const end = Math.hypot(Math.max(x, w - x), Math.max(y, h - y))
+    document.documentElement.animate(
+      { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${end}px at ${x}px ${y}px)`] },
+      { duration: 450, easing: 'ease-in-out', pseudoElement: '::view-transition-new(root)' },
+    )
   }
 }
 

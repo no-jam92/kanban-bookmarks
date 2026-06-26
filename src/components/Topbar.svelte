@@ -5,6 +5,14 @@
   import { iconStore } from '../lib/icons.svelte'
 
   let active = $derived(kanban.boards.find((b) => b.id === kanban.activeBoardId) ?? null)
+
+  function toggleTheme(e: MouseEvent) {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    theme.toggle({
+      x: e.clientX || r.left + r.width / 2,
+      y: e.clientY || r.top + r.height / 2,
+    })
+  }
 </script>
 
 <nav class="bar">
@@ -20,7 +28,7 @@
 
   <div class="spacer"></div>
 
-  <button class="theme-toggle" onclick={() => theme.toggle()}
+  <button class="theme-toggle" onclick={toggleTheme}
           aria-label="테마 전환" title={theme.isDark ? '라이트 모드로 전환' : '다크 모드로 전환'}>
     <!-- 전환될 상태(반대)를 표시 -->
     <span class="swatch" class:dark={!theme.isDark} class:light={theme.isDark}>
