@@ -9,6 +9,7 @@ export default defineManifest({
   permissions: ['bookmarks', 'favicon', 'storage', 'activeTab'],
   action: { default_title: '현재 탭을 칸반에 담기' },
   background: { service_worker: 'src/background.ts', type: 'module' },
+  options_page: 'src/options/index.html',
   chrome_url_overrides: {
     newtab: 'src/newtab/index.html',
   },
