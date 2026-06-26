@@ -101,7 +101,6 @@
   .board-name {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-2);
     font-size: var(--text-base);
     font-weight: var(--weight-medium);
     color: var(--color-text-secondary);
