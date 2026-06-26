@@ -1,20 +1,17 @@
 <script lang="ts">
-  import { dndzone, type DndEvent } from 'svelte-dnd-action'
+  import { dndzone, TRIGGERS, type DndEvent } from 'svelte-dnd-action'
   import { flip } from 'svelte/animate'
   import type { Column, Card } from '../lib/bookmarks'
   import { moveNode, renameNode, removeFolder, createCard } from '../lib/bookmarks'
   import { modal } from '../lib/modal.svelte'
+  import { cardDrag } from '../lib/drag.svelte'
   import CardView from './Card.svelte'
 
   let { column }: { column: Column } = $props()
 
   const flipDurationMs = 150
-  const dropTargetStyle = {
-    outline: '2px dashed var(--color-accent)',
-    outlineOffset: '-2px',
-    borderRadius: 'var(--radius-md)',
-    background: 'var(--color-accent-soft)',
-  }
+  // 기본 zone 하이라이트는 끄고, 시작/도착 컬럼만 직접 강조한다.
+  const dropTargetStyle = {}
   // svelte-ignore state_referenced_locally
   let items = $state<Card[]>(column.cards)
   let dragging = $state(false)
@@ -31,10 +28,15 @@
   function consider(e: CustomEvent<DndEvent<Card>>) {
     dragging = true
     items = e.detail.items
+    const t = e.detail.info.trigger
+    if (t === TRIGGERS.DRAG_STARTED) cardDrag.start(column.id)
+    else if (t === TRIGGERS.DRAGGED_ENTERED || t === TRIGGERS.DRAGGED_ENTERED_ANOTHER)
+      cardDrag.enter(column.id)
   }
   async function finalize(e: CustomEvent<DndEvent<Card>>) {
     items = e.detail.items
     dragging = false
+    cardDrag.end()
     const movedId = e.detail.info.id
     const newIndex = items.findIndex((c) => c.id === movedId)
     if (newIndex >= 0) {
@@ -74,7 +76,7 @@
   }
 </script>
 
-<section class="column">
+<section class="column" class:highlight={cardDrag.highlights(column.id)}>
   <header>
     {#if editing}
       <input class="tn-input title-input" bind:value={titleDraft} onblur={saveTitle}
@@ -117,6 +119,15 @@
     border: 1px solid var(--color-border-subtle);
     border-radius: var(--radius-lg);
     padding: var(--space-3);
+    transition: background var(--transition), border-color var(--transition),
+      outline-color var(--transition);
+    outline: 2px dashed transparent;
+    outline-offset: -2px;
+  }
+  .column.highlight {
+    outline-color: var(--color-accent);
+    border-color: var(--color-accent);
+    background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
   }
 
   header {
