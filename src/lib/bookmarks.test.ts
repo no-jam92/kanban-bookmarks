@@ -3,7 +3,7 @@ import { createFakeChrome } from '../test/fake-chrome'
 import {
   ensureRootFolder, listBoards, getBoard,
   createBoard, createColumn, createCard,
-  renameNode, removeFolder, removeCard, moveNode,
+  renameNode, removeFolder, removeCard, moveNode, updateCard,
 } from './bookmarks'
 
 beforeEach(() => {
@@ -72,5 +72,15 @@ describe('board/column/card model', () => {
     await removeFolder(a)
     built = await getBoard(board)
     expect(built.columns.map((c) => c.title)).toEqual(['B2'])
+  })
+
+  it('updateCard changes both title and url', async () => {
+    const root = await ensureRootFolder()
+    const board = await createBoard(root, 'B')
+    const col = await createColumn(board, 'C')
+    const card = await createCard(col, 'Old', 'https://old.com')
+    await updateCard(card, 'New', 'https://new.com')
+    const built = await getBoard(board)
+    expect(built.columns[0].cards[0]).toMatchObject({ title: 'New', url: 'https://new.com' })
   })
 })

@@ -2,28 +2,29 @@
   import { ui } from '../lib/ui.svelte'
   import { kanban } from '../lib/store.svelte'
   import { theme } from '../lib/theme.svelte'
-  import { boardEmoji } from '../lib/board-icon'
+  import { iconStore } from '../lib/icons.svelte'
 
-  let activeTitle = $derived(
-    kanban.boards.find((b) => b.id === kanban.activeBoardId)?.title ?? '',
-  )
+  let active = $derived(kanban.boards.find((b) => b.id === kanban.activeBoardId) ?? null)
 </script>
 
 <nav class="bar">
   <button class="tn-icon-btn hamburger" onclick={() => ui.toggleSidebar()}
           aria-label="사이드바 토글" aria-expanded={ui.sidebarOpen}>☰</button>
   <span class="brand"><span class="logo">◧</span> Kanban</span>
-  {#if activeTitle}
+  {#if active}
     <span class="sep">/</span>
-    <span class="board-name"><span class="b-icon">{boardEmoji(activeTitle)}</span>{activeTitle}</span>
+    <span class="board-name">
+      <span class="b-icon">{iconStore.boardIcon(active.id, active.title)}</span>{active.title}
+    </span>
   {/if}
 
   <div class="spacer"></div>
 
   <button class="theme-toggle" onclick={() => theme.toggle()}
           aria-label="테마 전환" title={theme.isDark ? '라이트 모드로 전환' : '다크 모드로 전환'}>
-    <span class="swatch" class:dark={theme.isDark} class:light={!theme.isDark}>
-      {theme.isDark ? '🌙' : '☀️'}
+    <!-- 전환될 상태(반대)를 표시 -->
+    <span class="swatch" class:dark={!theme.isDark} class:light={theme.isDark}>
+      {theme.isDark ? '☀️' : '🌙'}
     </span>
   </button>
 </nav>

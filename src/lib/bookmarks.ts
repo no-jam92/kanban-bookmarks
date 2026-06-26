@@ -72,6 +72,10 @@ export async function renameNode(id: string, title: string): Promise<void> {
   await chrome.bookmarks.update(id, { title })
 }
 
+export async function updateCard(id: string, title: string, url: string): Promise<void> {
+  await chrome.bookmarks.update(id, { title, url })
+}
+
 export async function removeFolder(id: string): Promise<void> {
   await chrome.bookmarks.removeTree(id)
 }

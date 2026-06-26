@@ -1,9 +1,9 @@
 <script lang="ts">
   import { kanban } from '../lib/store.svelte'
   import { ui } from '../lib/ui.svelte'
-  import { createBoard, removeFolder } from '../lib/bookmarks'
+  import { createBoard, removeFolder, renameNode } from '../lib/bookmarks'
   import { modal } from '../lib/modal.svelte'
-  import { boardEmoji } from '../lib/board-icon'
+  import { iconStore } from '../lib/icons.svelte'
 
   async function addBoard() {
     if (!kanban.rootId) return
@@ -17,6 +17,22 @@
     const id = await createBoard(kanban.rootId, title)
     await kanban.reload()
     await kanban.selectBoard(id)
+  }
+
+  async function editBoard(e: MouseEvent, id: string, name: string) {
+    e.stopPropagation()
+    const res = await modal.form({
+      title: '보드 편집',
+      fields: [
+        { name: 'name', label: '이름', value: name, required: true },
+        { name: 'icon', label: '아이콘 (이모지, 비우면 기본)', value: iconStore.boards[id] ?? '', placeholder: '예: 🎯' },
+      ],
+      confirmText: '저장',
+    })
+    if (!res) return
+    const newName = res.name.trim()
+    if (newName && newName !== name) await renameNode(id, newName)
+    await iconStore.setBoardIcon(id, res.icon)
   }
 
   async function delBoard(id: string, title: string) {
@@ -44,9 +60,11 @@
         {#each kanban.boards as b (b.id)}
           <li class:active={b.id === kanban.activeBoardId}>
             <button class="board-btn" onclick={() => kanban.selectBoard(b.id)} title={b.title}>
-              <span class="b-icon">{boardEmoji(b.title)}</span>
+              <span class="b-icon">{iconStore.boardIcon(b.id, b.title)}</span>
               <span class="b-name">{b.title}</span>
             </button>
+            <button class="tn-icon-btn edit" onclick={(e) => editBoard(e, b.id, b.title)}
+                    aria-label="보드 편집" title="편집">✎</button>
             <button class="tn-icon-btn tn-icon-btn--danger del" onclick={() => delBoard(b.id, b.title)}
                     aria-label="보드 삭제">×</button>
           </li>
@@ -128,7 +146,8 @@
   .b-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   li.active .board-btn { color: var(--color-text); }
 
-  .del { opacity: 0; margin-right: var(--space-1); }
-  li:hover .del { opacity: 0.6; }
-  .del:hover { opacity: 1; }
+  .edit, .del { opacity: 0; }
+  .del { margin-right: var(--space-1); }
+  li:hover .edit, li:hover .del { opacity: 0.6; }
+  .edit:hover, .del:hover { opacity: 1; }
 </style>

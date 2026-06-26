@@ -1,25 +1,46 @@
 <script lang="ts">
   import type { Card } from '../lib/bookmarks'
-  import { removeCard, renameNode } from '../lib/bookmarks'
+  import { removeCard, updateCard } from '../lib/bookmarks'
   import { faviconUrl, initials } from '../lib/favicon'
   import { modal } from '../lib/modal.svelte'
+  import { iconStore } from '../lib/icons.svelte'
 
   let { card }: { card: Card } = $props()
   let imgFailed = $state(false)
+  let nonce = $state(0)
+
+  let override = $derived(iconStore.cardIcon(card.id))
 
   function open() {
     window.location.href = card.url
   }
-  async function rename(e: MouseEvent) {
+
+  async function edit(e: MouseEvent) {
     e.stopPropagation()
     const res = await modal.form({
-      title: '카드 이름 변경',
-      fields: [{ name: 'title', label: '이름', value: card.title, required: true }],
+      title: '카드 편집',
+      fields: [
+        { name: 'title', label: '이름', value: card.title, required: true },
+        { name: 'url', label: 'URL', type: 'url', value: card.url, required: true },
+        { name: 'icon', label: '아이콘 (이모지, 비우면 파비콘 사용)', value: override ?? '', placeholder: '예: 📌' },
+      ],
       confirmText: '저장',
     })
-    const title = res?.title.trim()
-    if (title && title !== card.title) await renameNode(card.id, title)
+    if (!res) return
+    const url = res.url.trim()
+    if (!url) return
+    await updateCard(card.id, res.title.trim() || url, url)
+    await iconStore.setCardIcon(card.id, res.icon)
+    imgFailed = false
+    nonce++
   }
+
+  function reloadFavicon(e: MouseEvent) {
+    e.stopPropagation()
+    imgFailed = false
+    nonce++
+  }
+
   async function del(e: MouseEvent) {
     e.stopPropagation()
     const ok = await modal.confirm({
@@ -38,10 +59,12 @@
 
 <div class="card" onclick={open} role="button" tabindex="0"
      onkeydown={(e) => e.key === 'Enter' && open()}>
-  {#if imgFailed}
+  {#if override}
+    <span class="fallback emoji">{override}</span>
+  {:else if imgFailed}
     <span class="fallback">{initials(card.url)}</span>
   {:else}
-    <img class="favicon" src={faviconUrl(card.url)} alt=""
+    <img class="favicon" src={faviconUrl(card.url, 32, nonce)} alt=""
          onerror={() => (imgFailed = true)} />
   {/if}
   <span class="body">
@@ -49,7 +72,10 @@
     {#if host}<span class="host">{host}</span>{/if}
   </span>
   <span class="actions">
-    <button class="tn-icon-btn" onclick={rename} aria-label="이름변경">✎</button>
+    {#if !override}
+      <button class="tn-icon-btn" onclick={reloadFavicon} aria-label="파비콘 다시 불러오기" title="파비콘 다시 불러오기">⟳</button>
+    {/if}
+    <button class="tn-icon-btn" onclick={edit} aria-label="편집" title="편집">✎</button>
     <button class="tn-icon-btn tn-icon-btn--danger" onclick={del} aria-label="삭제">×</button>
   </span>
 </div>
@@ -92,6 +118,7 @@
     background: var(--color-accent-soft);
     object-fit: contain;
   }
+  .fallback.emoji { background: transparent; font-size: 16px; }
 
   .body {
     flex: 1;

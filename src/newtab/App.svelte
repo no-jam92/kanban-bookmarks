@@ -1,13 +1,17 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
   import { kanban } from '../lib/store.svelte'
+  import { iconStore } from '../lib/icons.svelte'
   import { createBoard } from '../lib/bookmarks'
   import Topbar from '../components/Topbar.svelte'
   import Sidebar from '../components/Sidebar.svelte'
   import BoardView from '../components/Board.svelte'
   import ModalHost from '../components/ModalHost.svelte'
 
-  onMount(() => { void kanban.init() })
+  onMount(() => {
+    void iconStore.load()
+    void kanban.init()
+  })
   onDestroy(() => kanban.dispose())
 
   async function createFirstBoard() {
