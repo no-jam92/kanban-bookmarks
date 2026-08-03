@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kanban Bookmarks — 북마크 폴더가 곧 보드다</title>
+<meta name="description" content="Chrome 북마크 폴더를 새 탭에서 칸반 보드로 엽니다. 별도 계정도, 별도 데이터베이스도 없습니다.">
+<meta property="og:title" content="Kanban Bookmarks">
+<meta property="og:description" content="Chrome 북마크 폴더를 새 탭에서 칸반 보드로 엽니다.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>">
+<style>
+:root {
+  --ink:      #16161e;
+  --night:    #1a1b26;
+  --panel:    #1f2335;
+  --card:     #24283b;
+  --rule:     #292e42;
+  --rule-2:   #3b4261;
+
+  --fg:       #c0caf5;
+  --fg-2:     #a9b1d6;
+  --muted:    #565f89;
+
+  --blue:     #7aa2f7;
+  --cyan:     #7dcfff;
+  --purple:   #bb9af7;
+  --green:    #9ece6a;
+  --orange:   #ff9e64;
+
+  --select:   rgba(122, 162, 247, .18);
+
+  --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+          "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, "JetBrains Mono",
+          "D2Coding", monospace;
+
+  --cw: 212px;
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--night);
+  color: var(--fg);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection { background: var(--select); color: #fff; }
+
+a { color: var(--blue); text-decoration: none; }
+a:hover { color: #8fb4ff; }
+
+:focus-visible {
+  outline: 2px solid rgba(122, 162, 247, .55);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.wrap { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
+
+/* ---------- nav ---------- */
+.nav {
+  display: flex; align-items: center; gap: 20px;
+  height: 62px;
+  border-bottom: 1px solid var(--rule);
+}
+.mark {
+  font-family: var(--mono);
+  font-size: 13px; letter-spacing: -.01em;
+  color: var(--fg);
+  margin-right: auto;
+}
+.mark b { color: var(--blue); font-weight: 500; }
+.nav a { font-size: 13.5px; color: var(--fg-2); }
+.nav a:hover { color: var(--fg); }
+
+/* ---------- hero ---------- */
+.hero { padding-block: 84px 8px; }
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: var(--mono); font-size: 12px; letter-spacing: .06em;
+  color: var(--muted); text-transform: lowercase;
+  margin: 0 0 26px;
+}
+.eyebrow::before {
+  content: ""; width: 26px; height: 1px; background: var(--rule-2);
+}
+h1 {
+  margin: 0;
+  font-size: clamp(2.5rem, 6.4vw, 4.35rem);
+  line-height: .98;
+  letter-spacing: -.035em;
+  font-weight: 800;
+  color: #dfe6ff;
+}
+h1 .sel {
+  background: rgba(122, 162, 247, .15);
+  box-shadow: 0 0 0 1px rgba(122, 162, 247, .15);
+  border-radius: 3px;
+}
+.lede {
+  max-width: 46ch;
+  margin: 26px 0 0;
+  font-size: 1.06rem;
+  color: var(--fg-2);
+}
+
+/* ---------- demo ---------- */
+.demo { padding-block: 46px 0; }
+.demo-bar {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 18px;
+}
+.switch {
+  display: inline-flex; padding: 3px; gap: 3px;
+  background: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+}
+.switch button {
+  appearance: none; border: 0; cursor: pointer;
+  padding: 6px 16px; border-radius: 999px;
+  background: transparent; color: var(--muted);
+  font: inherit; font-size: 13px; font-weight: 600;
+  transition: background 160ms ease, color 160ms ease;
+}
+.switch button:hover { color: var(--fg-2); }
+.switch button[aria-pressed="true"] { background: var(--blue); color: var(--ink); }
+.demo-note {
+  font-family: var(--mono); font-size: 12px; color: var(--muted);
+}
+
+.stage {
+  position: relative;
+  padding: 22px 22px 22px 26px;
+  background: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  transition: height 460ms cubic-bezier(.2, .85, .25, 1),
+              max-width 460ms cubic-bezier(.2, .85, .25, 1);
+}
+/* the panel itself reshapes: a tall narrow tree → a wide short board.
+   height is measured from the content in JS, so it survives any font/width */
+.stage[data-view="tree"]  { max-width: 516px; }
+.stage[data-view="board"] { max-width: 960px; }
+
+/* board title / tree root — cross-faded */
+.rootline { position: relative; height: 46px; margin-bottom: 10px; }
+.rl { position: absolute; inset: 0; transition: opacity 260ms ease; }
+.rl-tree { font-family: var(--mono); font-size: 12.5px; color: var(--muted); line-height: 1.7; }
+.rl-tree b { color: var(--fg-2); font-weight: 400; }
+.rl-board { display: flex; align-items: center; gap: 9px; font-size: 19px; font-weight: 700; color: var(--fg); }
+.rl-board span:last-child { letter-spacing: -.01em; }
+.stage[data-view="tree"]  .rl-board { opacity: 0; }
+.stage[data-view="board"] .rl-tree  { opacity: 0; }
+
+.cols {
+  position: relative;
+  display: flex; gap: 4px;
+  flex-direction: column; align-items: flex-start;
+}
+/* indent rails — the editor idiom, not ASCII art */
+.cols::before, .grp::after {
+  content: "";
+  position: absolute; top: 2px; bottom: 2px; width: 1px;
+  background: var(--rule-2);
+  transition: opacity 220ms ease;
+  pointer-events: none;
+}
+.cols::before { left: 14px; }
+.grp::after  { left: 44px; top: 34px; }
+
+.grp { position: relative; display: flex; flex-direction: column; gap: 4px; }
+.grp::before {
+  content: "";
+  position: absolute; inset: -10px -10px -10px -10px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  opacity: 0;
+  transition: opacity 300ms ease;
+  pointer-events: none;
+}
+
+.grp-head, .item { position: relative; width: var(--cw); }
+
+.grp-head {
+  display: flex; align-items: center; gap: 8px;
+  height: 30px; padding: 0 4px;
+  font-size: 13.5px; font-weight: 700; color: var(--fg);
+}
+.grp-head .count {
+  margin-left: auto;
+  font-family: var(--mono); font-size: 11px; font-weight: 500;
+  color: var(--muted);
+}
+
+.item {
+  display: flex; gap: 9px; align-items: flex-start;
+  padding: 9px 10px;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+}
+.fav {
+  flex: none; width: 17px; height: 17px; margin-top: 1px;
+  border-radius: 4px;
+  display: grid; place-items: center;
+  font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+  color: var(--ink);
+  background: var(--c);
+}
+.item-t { font-size: 12.7px; line-height: 1.35; color: var(--fg); }
+.item-h { font-family: var(--mono); font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+
+/* --- tree state --- */
+.stage[data-view="tree"] .grp-head { margin-left: 30px; }
+.stage[data-view="tree"] .item     { margin-left: 60px; }
+.stage[data-view="tree"] .grp      { margin-bottom: 8px; }
+
+/* --- board state --- */
+.stage[data-view="board"] .cols { flex-direction: row; gap: 30px; padding-top: 10px; }
+.stage[data-view="board"] .grp  { gap: 7px; }
+.stage[data-view="board"] .grp::before { opacity: 1; }
+.stage[data-view="board"] .cols::before,
+.stage[data-view="board"] .grp::after { opacity: 0; }
+
+/* ---------- sections ---------- */
+section { border-top: 1px solid var(--rule); }
+section.wrap { padding-block: 96px; }
+.sec-label {
+  display: flex; align-items: center; gap: 12px;
+  font-family: var(--mono); font-size: 12px; letter-spacing: .06em;
+  color: var(--muted); margin: 0 0 18px;
+}
+h2 {
+  margin: 0 0 40px;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1.2; letter-spacing: -.025em; font-weight: 700;
+  color: #dfe6ff;
+}
+
+/* mapping */
+.map { display: grid; gap: 2px; max-width: 620px; }
+.map-row {
+  display: grid; grid-template-columns: 1fr 44px 1fr;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.map-row:first-child { border-top: 1px solid var(--rule); }
+.map-from { text-align: right; color: var(--fg-2); font-size: .95rem; }
+.map-arrow {
+  text-align: center; font-family: var(--mono); font-size: 13px; color: var(--blue);
+}
+.map-to { font-weight: 700; color: var(--fg); }
+.map-to em {
+  font-style: normal; font-family: var(--mono); font-weight: 500;
+  font-size: 12px; color: var(--muted); margin-left: 9px;
+}
+.map-note { margin: 22px 0 0; color: var(--muted); font-size: .92rem; max-width: 620px; }
+
+/* features */
+.feats { display: grid; gap: 0; max-width: 720px; }
+.feat {
+  display: grid; grid-template-columns: 132px 1fr; gap: 24px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.feat:first-child { border-top: 1px solid var(--rule); }
+.feat dt {
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: .04em;
+  color: var(--muted); padding-top: 4px;
+}
+.feat dd { margin: 0; color: var(--fg-2); font-size: .96rem; }
+.feat dd b { color: var(--fg); font-weight: 600; }
+
+/* install */
+.steps { display: grid; gap: 30px; max-width: 720px; counter-reset: s; }
+.step { display: grid; grid-template-columns: 46px 1fr; gap: 18px; }
+.step > div { min-width: 0; } /* let the unwrappable <pre> scroll instead of widening the page */
+.step-n {
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  color: var(--blue); padding-top: 2px;
+}
+.step h3 { margin: 0 0 8px; font-size: 1rem; font-weight: 700; color: var(--fg); }
+.step p { margin: 0; color: var(--fg-2); font-size: .92rem; }
+.step p code {
+  font-family: var(--mono); font-size: .88em;
+  color: var(--fg-2); background: var(--ink);
+  padding: 2px 6px; border-radius: 4px;
+}
+
+.code {
+  position: relative;
+  margin-top: 10px;
+  background: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: 9px;
+}
+.cmd {
+  margin: 0;
+  padding: 14px 16px;
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.9;
+  color: var(--fg-2);
+  overflow-x: auto;
+  white-space: pre;
+}
+.cmd .p { color: var(--green); user-select: none; }
+.copy {
+  position: absolute; top: 9px; right: 9px; z-index: 1;
+  appearance: none; cursor: pointer;
+  padding: 4px 10px; border-radius: 5px;
+  border: 1px solid var(--rule-2); background: var(--panel);
+  color: var(--muted);
+  font-family: var(--mono); font-size: 11px;
+  transition: color 140ms ease, border-color 140ms ease;
+}
+.copy:hover { color: var(--fg); border-color: var(--blue); }
+
+.note {
+  max-width: 720px; margin: 46px 0 0;
+  padding: 20px 24px;
+  border-left: 2px solid var(--blue);
+  background: linear-gradient(90deg, rgba(122, 162, 247, .07), transparent 70%);
+  border-radius: 0 9px 9px 0;
+}
+.note h3 { margin: 0 0 8px; font-size: .95rem; font-weight: 700; color: var(--fg); }
+.note p { margin: 0 0 8px; font-size: .9rem; color: var(--fg-2); }
+.note p:last-child { margin-bottom: 0; }
+.note code {
+  font-family: var(--mono); font-size: .88em; color: var(--cyan);
+}
+
+/* footer */
+footer {
+  padding: 44px 0 64px;
+  border-top: 1px solid var(--rule);
+  display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: baseline;
+  font-family: var(--mono); font-size: 12px; color: var(--muted);
+}
+footer .sp { margin-left: auto; }
+
+@media (max-width: 700px) {
+  :root { --cw: 184px; }
+  .hero { padding-top: 56px; }
+  section.wrap { padding-block: 68px; }
+  .feat { grid-template-columns: 1fr; gap: 4px; }
+  .map-row { grid-template-columns: 1fr 34px 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition-duration: 1ms !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <nav class="nav">
+    <div class="mark">kanban<b>-</b>bookmarks</div>
+    <a href="#install">설치</a>
+    <a href="https://github.com/no-jam92/kanban-bookmarks">GitHub</a>
+  </nav>
+</div>
+
+<header class="wrap hero">
+  <p class="eyebrow">chrome://newtab</p>
+  <h1>북마크 폴더가<br><span class="sel">곧 보드다</span></h1>
+  <p class="lede">
+    새 탭을 열면 Chrome 북마크 폴더가 칸반으로 펼쳐집니다.
+    별도 계정도, 별도 데이터베이스도, 내보내기도 없습니다.
+  </p>
+</header>
+
+<div class="wrap demo">
+  <div class="demo-bar">
+    <div class="switch" role="group" aria-label="보기 전환">
+      <button type="button" data-view="tree" aria-pressed="true">트리</button>
+      <button type="button" data-view="board" aria-pressed="false">보드</button>
+    </div>
+    <span class="demo-note">같은 북마크, 다른 형태</span>
+  </div>
+
+  <div class="stage" data-view="tree">
+    <div class="rootline">
+      <div class="rl rl-tree">📚 Kanban<br>└─ 🚀 <b>Side Projects</b></div>
+      <div class="rl rl-board"><span>🚀</span><span>Side Projects</span></div>
+    </div>
+
+    <div class="cols">
+      <div class="grp">
+        <div class="grp-head">📥 <span>Inbox</span><span class="count">2</span></div>
+        <div class="item">
+          <span class="fav" style="--c: var(--orange)">S</span>
+          <span><span class="item-t">Svelte 5 runes 가이드</span><br><span class="item-h">svelte.dev</span></span>
+        </div>
+        <div class="item">
+          <span class="fav" style="--c: var(--purple)">C</span>
+          <span><span class="item-t">CRXJS Vite Plugin</span><br><span class="item-h">crxjs.dev</span></span>
+        </div>
+      </div>
+
+      <div class="grp">
+        <div class="grp-head">🔥 <span>Doing</span><span class="count">1</span></div>
+        <div class="item">
+          <span class="fav" style="--c: var(--blue)">D</span>
+          <span><span class="item-t">MV3 워커 수명주기</span><br><span class="item-h">developer.chrome.com</span></span>
+        </div>
+      </div>
+
+      <div class="grp">
+        <div class="grp-head">✅ <span>Done</span><span class="count">1</span></div>
+        <div class="item">
+          <span class="fav" style="--c: var(--green)">T</span>
+          <span><span class="item-t">Tokyo Night 팔레트</span><br><span class="item-h">github.com</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main>
+  <section class="wrap">
+    <p class="sec-label">규칙</p>
+    <h2>외울 게 세 줄뿐입니다</h2>
+    <div class="map">
+      <div class="map-row">
+        <div class="map-from">루트 폴더 안의 폴더</div>
+        <div class="map-arrow">──▸</div>
+        <div class="map-to">보드 <em>board</em></div>
+      </div>
+      <div class="map-row">
+        <div class="map-from">보드 폴더 안의 폴더</div>
+        <div class="map-arrow">──▸</div>
+        <div class="map-to">컬럼 <em>column</em></div>
+      </div>
+      <div class="map-row">
+        <div class="map-from">그 안의 북마크</div>
+        <div class="map-arrow">──▸</div>
+        <div class="map-to">카드 <em>card</em></div>
+      </div>
+    </div>
+    <p class="map-note">
+      폴더를 만들면 보드가 생기고, 카드를 옮기면 북마크가 옮겨집니다.
+      확장을 지워도 정리한 결과는 북마크에 그대로 남습니다.
+    </p>
+  </section>
+
+  <section class="wrap">
+    <p class="sec-label">기능</p>
+    <h2>새 탭에서 끝내는 것들</h2>
+    <dl class="feats">
+      <div class="feat">
+        <dt>담기</dt>
+        <dd>툴바 버튼을 누르면 <b>지금 보고 있는 탭</b>이 카드로 들어갑니다.</dd>
+      </div>
+      <div class="feat">
+        <dt>옮기기</dt>
+        <dd>카드와 컬럼을 드래그해 정렬합니다. 화면만 바뀌는 게 아니라 <b>북마크가 실제로 이동</b>합니다.</dd>
+      </div>
+      <div class="feat">
+        <dt>고치기</dt>
+        <dd>보드와 카드의 이름·아이콘을 <b>제자리에서</b> 편집합니다. 사이트 파비콘은 자동으로 붙습니다.</dd>
+      </div>
+      <div class="feat">
+        <dt>넘나들기</dt>
+        <dd>사이드바로 보드를 전환하고, 접어두면 <b>왼쪽 가장자리에 마우스를 대는 것</b>만으로 목록이 나옵니다.</dd>
+      </div>
+      <div class="feat">
+        <dt>테마</dt>
+        <dd>Tokyo Night 라이트·다크. 전환은 클릭한 지점에서 <b>원형으로 번집니다</b>.</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="wrap" id="install">
+    <p class="sec-label">설치</p>
+    <h2>직접 빌드해서 올립니다</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">01</div>
+        <div>
+          <h3>저장소를 받습니다</h3>
+          <div class="code" data-copy="git clone https://github.com/no-jam92/kanban-bookmarks.git
+cd kanban-bookmarks">
+            <button class="copy" type="button">복사</button>
+            <pre class="cmd"><span class="p">$ </span>git clone https://github.com/no-jam92/kanban-bookmarks.git
+<span class="p">$ </span>cd kanban-bookmarks</pre>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">02</div>
+        <div>
+          <h3>빌드합니다</h3>
+          <div class="code" data-copy="npm ci && npm run build">
+            <button class="copy" type="button">복사</button>
+            <pre class="cmd"><span class="p">$ </span>npm ci &amp;&amp; npm run build</pre>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">03</div>
+        <div>
+          <h3>Chrome에 올립니다</h3>
+          <p><code>chrome://extensions</code> 에서 개발자 모드를 켜고, <b>압축해제된 확장 프로그램 로드</b>로 <code>dist/</code> 폴더를 선택합니다.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">04</div>
+        <div>
+          <h3>루트 폴더를 지정합니다</h3>
+          <p>옵션 페이지에서 보드로 쓸 북마크 폴더를 하나 고릅니다. 그다음부터는 새 탭이 그 폴더입니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <h3>컴퓨터 두 대에서 쓰기</h3>
+      <p>각 컴퓨터에서 위 과정을 그대로 반복하면 됩니다. 두 Chrome이 같은 Google 계정으로 로그인돼 있어야 데이터가 붙습니다.</p>
+      <p>보드·컬럼·카드는 Chrome 북마크 동기화를, 테마와 커스텀 아이콘은 <code>chrome.storage.sync</code>를 탑니다.</p>
+      <p><code>manifest.config.ts</code> 의 <code>key</code> 는 지우지 마세요. 확장 ID가 거기서 나오고, ID가 바뀌면 설정이 초기화됩니다.</p>
+    </div>
+  </section>
+</main>
+
+<div class="wrap">
+  <footer>
+    <span>Svelte 5 · Vite · CRXJS · Manifest V3</span>
+    <span>팔레트 — Tokyo Night</span>
+    <span class="sp"><a href="https://github.com/no-jam92/kanban-bookmarks">github.com/no-jam92/kanban-bookmarks</a></span>
+  </footer>
+</div>
+
+<script>
+const stage = document.querySelector('.stage')
+const cols = stage.querySelector('.cols')
+const rootline = stage.querySelector('.rootline')
+const buttons = [...document.querySelectorAll('.switch button')]
+const reduce = matchMedia('(prefers-reduced-motion: reduce)')
+
+// the panel hugs whatever the content actually measures — no magic heights
+function fit() {
+  const pad = 44 + 12 // stage padding + room for the column panel's bleed
+  stage.style.height = rootline.offsetHeight + 10 + cols.scrollHeight + pad + 'px'
+}
+
+function setView(next) {
+  if (stage.dataset.view === next) return
+  buttons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === next)))
+
+  if (reduce.matches) { stage.dataset.view = next; fit(); return }
+
+  const els = [...stage.querySelectorAll('.grp-head, .item')]
+  const first = els.map(el => el.getBoundingClientRect())
+  stage.dataset.view = next
+  fit()
+
+  els.forEach((el, i) => {
+    const a = first[i], b = el.getBoundingClientRect()
+    const dx = a.left - b.left, dy = a.top - b.top
+    if (!dx && !dy) return
+    el.animate(
+      [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }],
+      { duration: 540, easing: 'cubic-bezier(.2, .85, .25, 1)', delay: i * 22, fill: 'backwards' }
+    )
+  })
+}
+
+fit()
+addEventListener('resize', fit)
+
+let idle = true
+buttons.forEach(b => b.addEventListener('click', () => { idle = false; setView(b.dataset.view) }))
+setTimeout(() => { if (idle) setView('board') }, 1600)
+
+document.querySelectorAll('.code').forEach(block => {
+  const btn = block.querySelector('.copy')
+  btn.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(block.dataset.copy)
+    btn.textContent = '복사됨'
+    setTimeout(() => { btn.textContent = '복사' }, 1400)
+  })
+})
+</script>
+
+</body>
+</html>

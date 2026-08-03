@@ -6,6 +6,9 @@ Chrome 북마크 폴더를 새 탭에서 칸반 보드로 관리하는 확장 �
 - 툴바 버튼으로 현재 탭을 칸반에 담기
 - 보드/카드 이름·아이콘 인라인 편집, 드래그 정렬, 라이트/다크 테마
 
+소개 페이지: <https://no-jam92.github.io/kanban-bookmarks/>
+(소스는 `docs/index.html`. Settings → Pages 에서 Source 를 `main` 브랜치 `/docs` 로 지정하면 켜집니다.)
+
 ## 설치
 
 ```bash
