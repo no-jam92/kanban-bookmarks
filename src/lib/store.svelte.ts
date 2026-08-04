@@ -10,20 +10,28 @@ export class KanbanStore {
   activeBoardId = $state<string | null>(null)
   board = $state<Board | null>(null)
   loading = $state(true)
+  error = $state<string | null>(null)
 
   #debounce: ReturnType<typeof setTimeout> | null = null
   #onChange = () => this.#scheduleReload()
 
   async init(): Promise<void> {
     this.loading = true
-    this.rootId = await ensureRootFolder()
-    this.boards = await listBoards(this.rootId)
-    const { activeBoardId } = await getSettings()
-    const valid = activeBoardId && this.boards.some((b) => b.id === activeBoardId)
-    const next = valid ? activeBoardId! : this.boards[0]?.id ?? null
-    await this.selectBoard(next)
-    this.#subscribe()
-    this.loading = false
+    this.error = null
+    try {
+      this.rootId = await ensureRootFolder()
+      this.boards = await listBoards(this.rootId)
+      const { activeBoardId } = await getSettings()
+      const valid = activeBoardId && this.boards.some((b) => b.id === activeBoardId)
+      const next = valid ? activeBoardId! : this.boards[0]?.id ?? null
+      await this.selectBoard(next)
+      this.#subscribe()
+    } catch (e) {
+      // 루트 폴더를 못 잡으면 화면을 로딩 상태에 방치하지 말고 원인을 노출한다.
+      this.error = e instanceof Error ? e.message : String(e)
+    } finally {
+      this.loading = false
+    }
   }
 
   async selectBoard(id: string | null): Promise<void> {

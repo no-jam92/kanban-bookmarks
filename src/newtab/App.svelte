@@ -27,6 +27,17 @@
 
 {#if kanban.loading}
   <div class="state state--full"><p class="muted">불러오는 중…</p></div>
+{:else if kanban.error}
+  <div class="state state--full">
+    <div class="empty-card">
+      <span class="icon">◧</span>
+      <h2>북마크 폴더를 불러올 수 없습니다</h2>
+      <p class="muted">{kanban.error}</p>
+      <button class="tn-btn tn-btn--primary" onclick={() => chrome.runtime.openOptionsPage()}>
+        설정 열기
+      </button>
+    </div>
+  </div>
 {:else}
   <Topbar />
   <div class="layout">

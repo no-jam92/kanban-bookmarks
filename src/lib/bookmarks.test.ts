@@ -1,15 +1,18 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createFakeChrome } from '../test/fake-chrome'
+import { createFakeChrome, type FakeNode } from '../test/fake-chrome'
 import {
   ensureRootFolder, listBoards, getBoard,
   createBoard, createColumn, createCard,
   renameNode, removeFolder, removeCard, moveNode, updateCard,
 } from './bookmarks'
+import { getSettings, setSettings } from './settings'
+
+const seed = (nodes: FakeNode[]) => {
+  globalThis.chrome = createFakeChrome(nodes) as unknown as typeof chrome
+}
 
 beforeEach(() => {
-  globalThis.chrome = createFakeChrome([
-    { id: '1', title: 'Bookmarks Bar', children: [] },
-  ]) as unknown as typeof chrome
+  seed([{ id: '1', title: 'Bookmarks Bar', children: [] }])
 })
 
 describe('ensureRootFolder', () => {
@@ -18,6 +21,7 @@ describe('ensureRootFolder', () => {
     const children = await chrome.bookmarks.getChildren('1')
     expect(children[0].title).toBe('Kanban')
     expect(children[0].id).toBe(id)
+    expect((await getSettings()).rootFolderId).toBe(id)
   })
 
   it('reuses the saved root folder when still valid', async () => {
@@ -26,6 +30,64 @@ describe('ensureRootFolder', () => {
     expect(second).toBe(first)
     const children = await chrome.bookmarks.getChildren('1')
     expect(children).toHaveLength(1)
+  })
+
+  // 계정 북마크(bookmarks in your Google Account)를 쓰는 프로필에서는
+  // 북마크바 id가 '1'이 아니다 → 하드코딩하면 "Can't find parent bookmark for id."
+  it('resolves the bookmarks bar by folderType when its id is not "1"', async () => {
+    seed([
+      { id: '7', title: 'Bookmarks bar', folderType: 'bookmarks-bar', children: [] },
+      { id: '8', title: 'Other bookmarks', folderType: 'other', children: [] },
+    ])
+    const id = await ensureRootFolder()
+    const children = await chrome.bookmarks.getChildren('7')
+    expect(children.map((c) => c.title)).toEqual(['Kanban'])
+    expect(children[0].id).toBe(id)
+  })
+
+  it('adopts an existing Kanban folder in the bar instead of creating a duplicate', async () => {
+    seed([
+      {
+        id: '1', title: 'Bookmarks Bar', folderType: 'bookmarks-bar',
+        children: [{ id: '11', title: 'Kanban', children: [{ id: '12', title: 'Work', children: [] }] }],
+      },
+    ])
+    const id = await ensureRootFolder()
+    expect(id).toBe('11')
+    expect(await chrome.bookmarks.getChildren('1')).toHaveLength(1)
+    expect((await getSettings()).rootFolderId).toBe('11')
+    expect((await listBoards(id)).map((b) => b.title)).toEqual(['Work'])
+  })
+
+  it('adopts a Kanban folder that lives outside the bookmarks bar', async () => {
+    seed([
+      { id: '1', title: 'Bookmarks Bar', folderType: 'bookmarks-bar', children: [] },
+      {
+        id: '2', title: 'Other bookmarks', folderType: 'other',
+        children: [{ id: '21', title: 'Kanban', children: [] }],
+      },
+    ])
+    expect(await ensureRootFolder()).toBe('21')
+    expect(await chrome.bookmarks.getChildren('1')).toHaveLength(0)
+  })
+
+  it('ignores a saved rootFolderId that points to a bookmark instead of a folder', async () => {
+    seed([
+      {
+        id: '1', title: 'Bookmarks Bar', folderType: 'bookmarks-bar',
+        children: [{ id: '11', title: 'Not a folder', url: 'https://a.com' }],
+      },
+    ])
+    await setSettings({ rootFolderId: '11' })
+    const id = await ensureRootFolder()
+    expect(id).not.toBe('11')
+    const created = (await chrome.bookmarks.getChildren('1')).find((n) => n.id === id)
+    expect(created?.title).toBe('Kanban')
+  })
+
+  it('throws a readable error when no bookmark folder can be resolved', async () => {
+    seed([])
+    await expect(ensureRootFolder()).rejects.toThrow('북마크바 폴더를 찾을 수 없습니다')
   })
 })
 

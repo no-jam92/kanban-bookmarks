@@ -6,26 +6,66 @@ export interface BoardSummary { id: string; title: string; index: number }
 export interface Board { id: string; title: string; index: number; columns: Column[] }
 
 const ROOT_TITLE = 'Kanban'
-const BOOKMARKS_BAR_ID = '1'
+// 예전 크롬에서 북마크바에 쓰던 고정 id. 이제는 힌트로만 쓴다.
+const LEGACY_BAR_ID = '1'
 
-async function nodeExists(id: string): Promise<boolean> {
+// folderType은 Chrome 134+에서 추가됐고 @types/chrome에는 아직 없다.
+type Node = chrome.bookmarks.BookmarkTreeNode & { folderType?: string }
+
+async function isFolderId(id: string): Promise<boolean> {
   try {
-    await chrome.bookmarks.get(id)
-    return true
+    const [n] = await chrome.bookmarks.get(id)
+    return !n.url
   } catch {
     return false
   }
 }
 
+/**
+ * 북마크바 노드를 런타임에 찾는다.
+ * 계정 북마크(bookmarks in your Google Account)를 쓰는 프로필에서는
+ * 최상위 폴더 id가 '1'/'2'/'3'으로 고정되지 않으므로 하드코딩하면 안 된다.
+ */
+function pickBookmarksBar(tops: Node[]): Node {
+  const folders = tops.filter((n) => !n.url && n.folderType !== 'managed')
+  const bar =
+    folders.find((n) => n.folderType === 'bookmarks-bar') ??
+    folders.find((n) => n.id === LEGACY_BAR_ID) ??
+    folders[0]
+  if (!bar) {
+    throw new Error('북마크바 폴더를 찾을 수 없습니다. 설정에서 칸반 루트 폴더를 직접 지정해 주세요.')
+  }
+  return bar
+}
+
+// 트리를 훑어 해당 제목의 폴더를 찾는다(선순회, 첫 일치).
+function findFolderByTitle(nodes: Node[] | undefined, title: string): string | null {
+  for (const n of nodes ?? []) {
+    if (n.url) continue
+    if (n.title === title) return n.id
+    const hit = findFolderByTitle(n.children, title)
+    if (hit) return hit
+  }
+  return null
+}
+
 export async function ensureRootFolder(): Promise<string> {
   const { rootFolderId } = await getSettings()
-  if (rootFolderId && (await nodeExists(rootFolderId))) return rootFolderId
-  const created = await chrome.bookmarks.create({
-    parentId: BOOKMARKS_BAR_ID,
-    title: ROOT_TITLE,
-  })
-  await setSettings({ rootFolderId: created.id })
-  return created.id
+  if (rootFolderId && (await isFolderId(rootFolderId))) return rootFolderId
+
+  const [root] = await chrome.bookmarks.getTree()
+  const tops = (root.children ?? []) as Node[]
+  const bar = pickBookmarksBar(tops)
+
+  // 저장된 id가 없거나 무효해도, 이미 있는 Kanban 폴더가 있으면 그것을 이어서 쓴다.
+  // 북마크바 안쪽을 먼저 보고, 없으면 트리 전체에서 찾는다.
+  const existing =
+    findFolderByTitle(bar.children, ROOT_TITLE) ?? findFolderByTitle(tops, ROOT_TITLE)
+
+  const id =
+    existing ?? (await chrome.bookmarks.create({ parentId: bar.id, title: ROOT_TITLE })).id
+  await setSettings({ rootFolderId: id })
+  return id
 }
 
 const isFolder = (n: chrome.bookmarks.BookmarkTreeNode) => !n.url
